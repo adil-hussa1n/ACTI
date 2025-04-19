@@ -1,221 +1,194 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaChevronLeft, FaChevronRight, FaCircle } from "react-icons/fa";
 import image1 from "../images/1.JPG";
 import image2 from "../images/2.JPG";
 import image3 from "../images/3.JPG";
+import { colors } from "../constants/colors";
 
 const images = [
-  image1,
-  image2,
-  image3
+  {
+    src: image1,
+    title: "Modern Campus",
+    description: "State-of-the-art facilities designed for optimal learning"
+  },
+  {
+    src: image2,
+    title: "Innovative Learning",
+    description: "Hands-on experience with cutting-edge technology"
+  },
+  {
+    src: image3,
+    title: "Student Success",
+    description: "Building the future through quality education"
+  }
 ];
 
 const ImageSlider = () => {
   const [current, setCurrent] = useState(0);
   const [imageError, setImageError] = useState(false);
-  const [slideDirection, setSlideDirection] = useState('right');
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef(null);
 
   // Auto-slide functionality with smooth transitions
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSlideDirection('right');
-      setIsTransitioning(true);
-      setCurrent((prev) => (prev + 1) % images.length);
-      setTimeout(() => setIsTransitioning(false), 1000);
-    }, 5000); // Increased interval for better viewing experience
+    if (!isPaused) {
+      timerRef.current = setInterval(() => {
+        setCurrent((prev) => (prev + 1) % images.length);
+      }, 6000); // Slightly longer interval for better viewing experience
+    }
 
-    return () => clearInterval(timer);
-  }, []);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isPaused]);
 
   const nextSlide = () => {
-    setSlideDirection('right');
-    setIsTransitioning(true);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
     setCurrent((prev) => (prev + 1) % images.length);
-    setTimeout(() => setIsTransitioning(false), 1000);
+    setIsPaused(false);
   };
 
   const prevSlide = () => {
-    setSlideDirection('left');
-    setIsTransitioning(true);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
     setCurrent((prev) => (prev - 1 + images.length) % images.length);
-    setTimeout(() => setIsTransitioning(false), 1000);
+    setIsPaused(false);
+  };
+
+  const handleDotClick = (index) => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    setCurrent(index);
+    setIsPaused(false);
+  };
+
+  const handleMouseEnter = () => {
+    setIsPaused(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsPaused(false);
   };
 
   const handleImageError = () => {
     setImageError(true);
-    console.error("Image failed to load:", images[current]);
+    console.error("Image failed to load:", images[current].src);
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div 
+      className="relative w-full h-[500px] md:h-[600px] rounded-2xl overflow-hidden shadow-2xl border border-brand-700/30"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Main Image Container */}
-      <div className="relative w-full h-full">
-        {imageError ? (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-blue-900 to-blue-950">
-            <p className="text-white text-xl animate-pulse">Image not available</p>
-          </div>
-        ) : (
-          <div className="relative w-full h-full">
-            {/* Current Image */}
-            <img 
-              key={current}
-              src={images[current]} 
-              alt={`Slide ${current + 1}`}
-              className={`absolute w-full h-full object-cover transition-all duration-1000 ease-in-out
-                ${isTransitioning ? 'scale-105 blur-sm' : 'scale-100 blur-0'}
-                ${slideDirection === 'right' ? 'animate-slideZoomFadeRight' : 'animate-slideZoomFadeLeft'}
-              `}
-              onError={handleImageError}
-            />
-            {/* Preload next image */}
-            <img
-              src={images[(current + 1) % images.length]}
-              alt="Preload next"
-              className="hidden"
-            />
-          </div>
-        )}
-        {/* Enhanced Gradient Overlay with Dynamic Animation */}
-        <div className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent
-          transition-opacity duration-1000 ${isTransitioning ? 'opacity-80' : 'opacity-60'}
-          animate-gradientPulse
-        `}></div>
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key={current}
+          className="relative w-full h-full"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.7, ease: "easeInOut" }}
+        >
+          {imageError ? (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-bg-main to-bg-secondary">
+              <p className="text-white text-xl animate-pulse">Image not available</p>
+            </div>
+          ) : (
+            <>
+              {/* Current Image */}
+              <motion.img 
+                src={images[current].src} 
+                alt={images[current].title}
+                className="absolute w-full h-full object-cover"
+                initial={{ scale: 1.1, filter: "blur(8px)" }}
+                animate={{ scale: 1, filter: "blur(0px)" }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                onError={handleImageError}
+              />
+              
+              {/* Preload next image */}
+              <img
+                src={images[(current + 1) % images.length].src}
+                alt="Preload next"
+                className="hidden"
+              />
+            </>
+          )}
+          
+          {/* Enhanced Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+          
+          {/* Caption */}
+          <motion.div 
+            className="absolute bottom-0 left-0 w-full p-8 z-10"
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">{images[current].title}</h3>
+            <p className="text-white/80 text-sm md:text-base max-w-xl">{images[current].description}</p>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Navigation Buttons with Enhanced Effects */}
-      <button 
+      <motion.button 
         onClick={prevSlide} 
-        className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-md
-        text-white p-5 rounded-full hover:bg-white/30 transition-all duration-300 
-        shadow-lg hover:scale-110 group animate-floatSlow"
+        className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-brand-600/80 to-brand-700/80 backdrop-blur-md
+        text-white p-3 rounded-full transition-all duration-300 shadow-xl border border-white/10 z-20 group"
+        whileHover={{ scale: 1.1, x: -3 }}
+        whileTap={{ scale: 0.95 }}
         aria-label="Previous slide"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" 
-          className="h-8 w-8 transform group-hover:-translate-x-1 transition-transform duration-300" 
-          fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-      <button 
+        <FaChevronLeft className="h-5 w-5" />
+      </motion.button>
+      
+      <motion.button 
         onClick={nextSlide} 
-        className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white/10 backdrop-blur-md
-        text-white p-5 rounded-full hover:bg-white/30 transition-all duration-300 
-        shadow-lg hover:scale-110 group animate-floatSlow"
+        className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-brand-600/80 to-brand-700/80 backdrop-blur-md
+        text-white p-3 rounded-full transition-all duration-300 shadow-xl border border-white/10 z-20 group"
+        whileHover={{ scale: 1.1, x: 3 }}
+        whileTap={{ scale: 0.95 }}
         aria-label="Next slide"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" 
-          className="h-8 w-8 transform group-hover:translate-x-1 transition-transform duration-300" 
-          fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-
-      {/* Navigation Dots with Enhanced Effects */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-4">
+        <FaChevronRight className="h-5 w-5" />
+      </motion.button>
+      
+      {/* Slide Indicators */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
         {images.map((_, index) => (
-          <button
+          <motion.button
             key={index}
-            onClick={() => {
-              setSlideDirection(index > current ? 'right' : 'left');
-              setIsTransitioning(true);
-              setCurrent(index);
-              setTimeout(() => setIsTransitioning(false), 1000);
-            }}
-            className={`transform transition-all duration-500 ${
-              current === index 
-                ? "scale-125 animate-dotPulse" 
-                : "scale-100 hover:scale-110"
-            }`}
-          >
-            <div className={`w-3 h-3 rounded-full transition-all duration-500 
-              ${current === index 
-                ? "bg-white w-8 shadow-[0_0_15px_rgba(255,255,255,0.7)]" 
-                : "bg-white/50 hover:bg-white/75 w-3"}
-            `}/>
-          </button>
+            onClick={() => handleDotClick(index)}
+            className={`w-3 h-3 rounded-full ${current === index ? 'bg-white' : 'bg-white/40'} transition-all duration-300`}
+            whileHover={{ scale: 1.3 }}
+            whileTap={{ scale: 0.9 }}
+            aria-label={`Go to slide ${index + 1}`}
+          />
         ))}
       </div>
 
       {/* Enhanced Slide Counter */}
-      <div className="absolute bottom-8 right-8 bg-white/10 backdrop-blur-md text-white 
-        px-6 py-3 rounded-full text-lg font-medium animate-floatSlow
-        shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:shadow-[0_0_20px_rgba(255,255,255,0.5)]
-        transition-shadow duration-300">
+      <motion.div 
+        className="absolute bottom-8 right-8 bg-gradient-to-r from-brand-600/80 to-brand-700/80 backdrop-blur-md text-white 
+        px-4 py-2 rounded-full text-sm font-medium shadow-xl border border-white/10 z-20"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
         {current + 1} / {images.length}
-      </div>
+      </motion.div>
 
-      <style jsx>{`
-        @keyframes slideZoomFadeRight {
-          0% {
-            transform: translateX(100%) scale(1.2);
-            opacity: 0;
-          }
-          100% {
-            transform: translateX(0) scale(1);
-            opacity: 1;
-          }
-        }
 
-        @keyframes slideZoomFadeLeft {
-          0% {
-            transform: translateX(-100%) scale(1.2);
-            opacity: 0;
-          }
-          100% {
-            transform: translateX(0) scale(1);
-            opacity: 1;
-          }
-        }
-
-        @keyframes gradientPulse {
-          0%, 100% {
-            opacity: 0.6;
-          }
-          50% {
-            opacity: 0.8;
-          }
-        }
-
-        @keyframes floatSlow {
-          0%, 100% {
-            transform: translateY(-50%) translateX(0);
-          }
-          50% {
-            transform: translateY(-50%) translateX(5px);
-          }
-        }
-
-        @keyframes dotPulse {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.2);
-            opacity: 0.8;
-          }
-        }
-
-        .animate-slideZoomFadeRight {
-          animation: slideZoomFadeRight 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        .animate-slideZoomFadeLeft {
-          animation: slideZoomFadeLeft 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        .animate-gradientPulse {
-          animation: gradientPulse 3s ease-in-out infinite;
-        }
-
-        .animate-floatSlow {
-          animation: floatSlow 3s ease-in-out infinite;
-        }
-
-        .animate-dotPulse {
-          animation: dotPulse 2s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 };
